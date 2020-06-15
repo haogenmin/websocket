@@ -1,0 +1,226 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>登录</title>
+	<script type="text/javascript" src="/js/jquery-3.2.1.min.js"></script>
+	<script type="text/javascript" src="/js/vue2.2.1.js"></script>
+    <link rel="stylesheet" href="/css/login.css">
+</head>
+<body>
+<div class="login" id="app"  v-cloak>
+    <div class="login_title">
+        <p><img src="/image/jinghui.png" style="width:80px;height:80px;margin-right:30px;"/>梧州市公安局多警种数据展示平台</p>
+    </div>
+    <div class="login_main">
+        <div class="main_left"></div>
+        <div class="main_right">
+            <div class="right_title">用户登录</div>
+            <form @submit.prevent="submit">
+                <div class="username">
+                    <img src="/image/username.png" alt="">
+                   <input type="text" placeholder="请输入您的用户名" v-model="inputtext.name">
+                </div>
+                <div class="password">
+                    <img src="/image/password.png" alt="">
+                    <input type="password" placeholder="请输入您的密码" v-model="inputtext.password">
+                </div>
+				 <div class="password">
+				 <input type="text" align="right"  placeholder="请输入验证码" v-model="inputtext.imgcode"/><img @click="change" class="imagecode" :src=imgCode />
+                </div>
+				<div class="yes_login" ><a @click="submit" >登&nbsp;&nbsp;&nbsp;&nbsp;录</a></div>
+            </form>
+        </div>
+    </div>
+    <div class="login_footer">
+        <p class="name">版权所有：xxxx局</p>
+		<p>建议浏览器：IE8及以上、360、谷歌、Firefox v22</p>
+        <p>技术支持：武汉市虹信技术服务有限公司 &nbsp;&nbsp;联系电话：022-xxxxxx</p>
+        
+    </div>
+</div>
+
+<script type="text/javascript">
+    var rootUrl = document.URL;
+    console.log(rootUrl);
+    rootUrl = rootUrl.substring(0, rootUrl.indexOf("/", 8) + 1);
+    new Vue({
+        el: "#app",
+        data: {
+            imgCode: "",
+            inputtext: {},
+            codekey:"",
+            isRmbPwd:true
+        },
+        mounted: function () {
+            this.loginNo();
+            this.getCode();
+            this.initUserInfo();
+        },
+        methods: {
+            getCode: function () {
+                var self = this
+                $.ajax({
+                    type: "get",
+                    xhrFields: {
+                        withCredentials: true
+                    },
+                    data: {codekey: ""},
+                    url: rootUrl + 'm/sysuser/imagecode',
+                    success: function (response) {
+                          console.log(response.codekey)
+                        self.imgCode = "data:image/jpg;base64," + response.imageCode
+                       self.codekey = response.codekey;
+                    },
+                    error: function (XMLHttpRequest, textStatus, errorThrown) {
+                    }
+                })
+            },
+            //验证是否登录
+            loginNo: function () {
+                $.ajax({
+                    type: "get",
+                    xhrFields: {
+                        withCredentials: true
+                    },
+                    url: rootUrl + 'm/sysuser/n/valid',
+                    success: function (data, status, xhr) {
+
+                        window.location.href = "/test.html"
+                    },
+                })
+            },
+            //换一换验证码
+            change: function () {
+                var self = this;
+                $.ajax({
+                    type: "get",
+                    xhrFields: {
+                        withCredentials: true
+                    },
+                    data: {codekey: self.codekey},
+                    url: rootUrl + 'm/sysuser/imagecode',
+                    success: function (response) {
+                        self.imgCode = "data:image/jpg;base64," + response.imageCode;  
+                       self.codekey = response.codekey;      
+                    },
+                })
+            },
+            submit: function () {
+                 var self = this
+                if (JSON.stringify(self.inputtext) === '{}') {
+                    alert("请输入用户名和密码");
+                    return
+                }
+                if (self.inputtext.name === undefined) {
+                    alert("请输入用户名")
+                    return
+                }
+                if (self.inputtext.password === undefined) {
+                    alert("请输入密码")
+                    return
+                }
+                if (self.inputtext.imgcode === undefined) {
+                    alert("请输入验证码")
+                    return
+                }
+                var dataList = {
+                    inputStr: self.inputtext.name,
+                    password: self.inputtext.password,
+                    code: self.inputtext.imgcode,
+          			codekey:self.codekey,                    
+                    userType: 0
+                };
+                //登录
+                $.ajax({
+                    data: dataList,
+                    type: "post",
+                    dataType: 'json',
+                    xhrFields: {
+                        withCredentials: true
+                    },
+                    url: rootUrl + 'm/sysuser/login',
+                    success: function (data) {
+                        if (data.message == "login_success") {
+                            $(".loginSucces").show();
+                            // 记住账号密码
+                            //self.check();
+							//alert("登录成功！");
+                            window.location.href = "/test.html"
+                        }
+                    },
+                    error: function (XMLHttpRequest, textStatus, errorThrown) {
+                       alert(XMLHttpRequest.responseJSON.error);
+                        self.change();  
+                    }
+                })
+            },
+            check : function  (){
+                var self = this;
+                //获取表单输入:用户名,密码,是否保存密码
+                var username = self.inputtext.name;
+                var password = self.inputtext.password ;
+                var isRmbPwd = self.isRmbPwd;
+                //判断用户名,密码是否为空(全空格也算空)
+                if ( username.length != 0 && password.length != 0 ){
+                    //若复选框勾选,则添加Cookie,记录密码
+                    if ( isRmbPwd == true ){   
+                        self.setCookie ( "inputStr", username, 7 ) ;
+                        self.setCookie ( username, password, 7 ) ;
+                    } else { //否则清除Cookie
+                        self.delCookie ( "inputStr" ) ;
+                        self.delCookie ( username ) ;
+                    }
+                    return true ;
+                } 
+            },
+            setCookie: function(name, value, expdays){
+                var expdate = new Date();
+                //设置Cookie过期日期
+                expdate.setDate(expdate.getDate() + expdays) ;
+                //添加Cookie
+                document.cookie = name + "=" + escape(value) + ";expires=" + expdate.toUTCString();
+            },
+            getCookie: function(name){
+                //获取name在Cookie中起止位置
+                var start = document.cookie.indexOf(name+"=") ;
+
+                if ( start != -1 )
+                {
+                    start = start + name.length + 1 ;
+                    //获取value的终止位置
+                    var end = document.cookie.indexOf(";", start) ;
+                    if ( end == -1 )
+                        end = document.cookie.length ;
+                    //截获cookie的value值,并返回
+                    return unescape(document.cookie.substring(start,end)) ;
+                }
+                return "" ;
+            },
+            delCookie: function (name){
+                self.setCookie ( name, "", -1 ) ;
+            },
+
+            initUserInfo: function(){
+                var self = this;
+                //从Cookie获取到用户名
+                var username = self.getCookie("inputStr");
+                //如果用户名为空,则给表单元素赋空值
+                if ( username == "" ){
+                    self.inputtext.name = "" ;
+                    self.inputtext.password = "" ;
+                    //self.isRmbPwd = false;
+                } else { //获取对应的密码,并把用户名,密码赋值给表单
+                    var password = self.getCookie(username) ;
+                    self.inputtext.name = username ;
+                    self.inputtext.password = password ;
+                    self.isRmbPwd = true ;
+                }
+            }
+
+        }
+    })
+
+</script>
+</body>
+</html>
